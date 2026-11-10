@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生態慧眼：淡江大學植物探查</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #dcfce7 100%);
+            min-height: 100vh;
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        /* 自定義探測儀游標 */
+        .detector-cursor {
+            cursor: crosshair;
+        }
+
+        /* 掃描線動畫 */
+        @keyframes scan {
+            0% { top: -10%; opacity: 0; }
+            50% { opacity: 1; }
+            100% { top: 110%; opacity: 0; }
+        }
+
+        .scan-line {
+            position: absolute;
+            width: 100%;
+            height: 4px;
+            background: rgba(74, 222, 128, 0.8);
+            box-shadow: 0 0 10px rgba(74, 222, 128, 0.8);
+            left: 0;
+            top: -10%;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .group:hover .scan-line {
+            animation: scan 2s linear infinite;
+        }
+
+        /* 彈跳視窗進入動畫 */
+        @keyframes popIn {
+            0% { transform: scale(0.9); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .modal-animate {
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+
+    <!-- 主容器 -->
+    <div class="max-w-4xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden relative border border-gray-100">
+        
+        <!-- 1. 起始教學畫面 -->
+        <div id="intro-screen" class="p-8 md:p-12 flex flex-col items-center text-center">
+            <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center text-5xl mb-6 shadow-inner">
+                🌱
+            </div>
+            <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800 mb-4 tracking-tight">生態慧眼：淡江大學植物探查</h1>
+            <p class="text-gray-600 mb-8 max-w-2xl leading-relaxed">
+                歡迎來到生態探勘中心！身為生態調查員，你的任務是使用「滑鼠溫濕度探測儀」為校園內的特殊植物尋找最適合的棲息地。請先熟悉以下三種目標植物的生長需求：
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mb-10">
+                <!-- 植物介紹卡片 1 -->
+                <div class="bg-blue-50 rounded-2xl p-5 border border-blue-100 text-left hover:shadow-md transition">
+                    <div class="text-4xl mb-2">🌿</div>
+                    <h3 class="text-lg font-bold text-gray-800">筆筒樹 (大型蕨類)</h3>
+                    <p class="text-sm text-gray-600 mt-2">喜歡生長在極度潮濕且偏涼爽的遮陰處。</p>
+                    <div class="mt-4 bg-white rounded-lg p-2 text-sm">
+                        <div class="flex justify-between"><span class="text-gray-500">🌡️ 溫度</span> <span class="font-semibold text-blue-600">18 ~ 24°C</span></div>
+                        <div class="flex justify-between mt-1"><span class="text-gray-500">💧 濕度</span> <span class="font-semibold text-blue-600">75 ~ 95%</span></div>
+                    </div>
+                </div>
+                <!-- 植物介紹卡片 2 -->
+                <div class="bg-yellow-50 rounded-2xl p-5 border border-yellow-100 text-left hover:shadow-md transition">
+                    <div class="text-4xl mb-2">🌵</div>
+                    <h3 class="text-lg font-bold text-gray-800">耐旱多肉植物</h3>
+                    <p class="text-sm text-gray-600 mt-2">適應力強，能承受高溫且非常乾燥的環境。</p>
+                    <div class="mt-4 bg-white rounded-lg p-2 text-sm">
+                        <div class="flex justify-between"><span class="text-gray-500">🌡️ 溫度</span> <span class="font-semibold text-yellow-600">28 ~ 38°C</span></div>
+                        <div class="flex justify-between mt-1"><span class="text-gray-500">💧 濕度</span> <span class="font-semibold text-yellow-600">20 ~ 40%</span></div>
+                    </div>
+                </div>
+                <!-- 植物介紹卡片 3 -->
+                <div class="bg-pink-50 rounded-2xl p-5 border border-pink-100 text-left hover:shadow-md transition">
+                    <div class="text-4xl mb-2">🌸</div>
+                    <h3 class="text-lg font-bold text-gray-800">平戶杜鵑</h3>
+                    <p class="text-sm text-gray-600 mt-2">校園常見植物，需要溫暖且濕度適中的環境。</p>
+                    <div class="mt-4 bg-white rounded-lg p-2 text-sm">
+                        <div class="flex justify-between"><span class="text-gray-500">🌡️ 溫度</span> <span class="font-semibold text-pink-600">22 ~ 28°C</span></div>
+                        <div class="flex justify-between mt-1"><span class="text-gray-500">💧 濕度</span> <span class="font-semibold text-pink-600">55 ~ 70%</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="startGame()" class="bg-green-600 hover:bg-green-500 text-white font-bold text-lg py-4 px-12 rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
+                🚀 開始探勘
+            </button>
+        </div>
+
+        <!-- 2. 遊戲主畫面 -->
+        <div id="game-screen" class="hidden flex flex-col h-full">
+            <!-- 任務面板 -->
+            <div class="bg-gray-800 text-white p-6 shadow-md flex flex-col md:flex-row justify-between items-center z-10 relative">
+                <div class="mb-4 md:mb-0">
+                    <span id="round-display" class="bg-green-500 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">回合 1 / 3</span>
+                    <h2 class="text-2xl font-bold mt-2">尋找 <span id="target-plant-name" class="text-green-400"></span> 的棲地！</h2>
+                    <p id="target-plant-desc" class="text-gray-400 text-sm mt-1"></p>
+                </div>
+                <div class="bg-gray-700 rounded-xl p-3 text-sm min-w-[160px]">
+                    <div class="text-gray-300 mb-1 text-center font-semibold">🔍 目標需求</div>
+                    <div class="flex justify-between"><span class="mr-2">🌡️</span> <span id="target-temp" class="font-mono text-green-300"></span></div>
+                    <div class="flex justify-between mt-1"><span class="mr-2">💧</span> <span id="target-hum" class="font-mono text-blue-300"></span></div>
+                </div>
+            </div>
+
+            <!-- 地形區塊 -->
+            <div class="p-6 bg-gray-50 flex-grow">
+                <div class="text-center text-sm text-gray-500 mb-4 font-semibold">
+                    👇 將游標懸停在地形上探測溫濕度 (手機版請點擊查看與確認) 👇
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4" id="terrains-container">
+                    <!-- 地形將由 JS 動態生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 結算畫面 -->
+        <div id="outro-screen" class="hidden p-12 flex flex-col items-center text-center">
+            <div class="w-32 h-32 bg-yellow-100 rounded-full flex items-center justify-center text-6xl mb-6 shadow-inner border-4 border-yellow-300">
+                🏆
+            </div>
+            <h1 class="text-4xl font-extrabold text-gray-800 mb-4">任務圓滿完成！</h1>
+            <p class="text-lg text-gray-600 mb-8 max-w-xl">
+                太棒了！你成功為所有植物找到了最適合生長的棲息地。感謝你對生態保育與觀察的貢獻！
+            </p>
+            <button onclick="resetGame()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg py-4 px-12 rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
+                🔄 重新遊玩
+            </button>
+        </div>
+
+        <!-- 4. 互動回饋彈跳視窗 (Modal) -->
+        <div id="feedback-modal" class="hidden absolute inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div id="modal-content" class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl transform transition-all modal-animate">
+                <div id="modal-icon" class="text-6xl mb-4">✅</div>
+                <h3 id="modal-title" class="text-2xl font-bold mb-2 text-gray-800">正確！</h3>
+                <p id="modal-desc" class="text-gray-600 mb-6 text-base leading-relaxed">這裡的環境非常適合生長。</p>
+                <button id="modal-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl shadow transition">
+                    下一回合
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /* === 遊戲資料設定 === */
+        const plantsData = [
+            {
+                id: 0,
+                name: '筆筒樹 (大型蕨類)',
+                emoji: '🌿',
+                minT: 18, maxT: 24,
+                minH: 75, maxH: 95,
+                desc: '孢子繁殖，無法承受烈日與乾燥。'
+            },
+            {
+                id: 1,
+                name: '耐旱多肉植物',
+                emoji: '🌵',
+                minT: 28, maxT: 38,
+                minH: 20, maxH: 40,
+                desc: '葉片肥厚能儲水，極度害怕水澇爛根。'
+            },
+            {
+                id: 2,
+                name: '平戶杜鵑',
+                emoji: '🌸',
+                minT: 22, maxT: 28,
+                minH: 55, maxH: 70,
+                desc: '喜歡溫暖氣候，排水需良好，不能過濕或過乾。'
+            }
+        ];
+
+        const terrainsVisuals = [
+            { name: '森林', emoji: '🌲', bg: 'bg-emerald-700', text: 'text-emerald-100' },
+            { name: '林地', emoji: '🌳', bg: 'bg-green-600', text: 'text-green-100' },
+            { name: '窪地', emoji: '🕳️', bg: 'bg-yellow-800', text: 'text-yellow-100' },
+            { name: '沼澤', emoji: '🐸', bg: 'bg-teal-900', text: 'text-teal-100' },
+            { name: '溪流', emoji: '💧', bg: 'bg-blue-500', text: 'text-blue-100' }
+        ];
+
+        /* === 遊戲狀態 === */
+        let currentRound = 0;
+        let playOrder = [];
+        let currentTerrains = [];
+        const totalRounds = 3;
+
+        /* === DOM 元素 === */
+        const screens = {
+            intro: document.getElementById('intro-screen'),
+            game: document.getElementById('game-screen'),
+            outro: document.getElementById('outro-screen')
+        };
+        const modal = {
+            overlay: document.getElementById('feedback-modal'),
+            content: document.getElementById('modal-content'),
+            icon: document.getElementById('modal-icon'),
+            title: document.getElementById('modal-title'),
+            desc: document.getElementById('modal-desc'),
+            btn: document.getElementById('modal-btn')
+        };
+
+        /* === 初始化與流程控制 === */
+        function initPlayOrder() {
+            playOrder = [0, 1, 2].sort(() => Math.random() - 0.5); // 隨機打亂出場順序
+        }
+
+        function startGame() {
+            initPlayOrder();
+            currentRound = 0;
+            switchScreen('game');
+            loadRound();
+        }
+
+        function resetGame() {
+            initPlayOrder();
+            currentRound = 0;
+            switchScreen('intro');
+        }
+
+        function switchScreen(screenName) {
+            Object.values(screens).forEach(s => s.classList.add('hidden'));
+            screens[screenName].classList.remove('hidden');
+        }
+
+        /* === 回合邏輯與數值生成 === */
+        function loadRound() {
+            const currentPlant = plantsData[playOrder[currentRound]];
+            
+            // 更新 UI 面板
+            document.getElementById('round-display').innerText = `回合 ${currentRound + 1} / ${totalRounds}`;
+            document.getElementById('target-plant-name').innerText = currentPlant.emoji + ' ' + currentPlant.name;
+            document.getElementById('target-plant-desc').innerText = currentPlant.desc;
+            document.getElementById('target-temp').innerText = `${currentPlant.minT} ~ ${currentPlant.maxT}°C`;
+            document.getElementById('target-hum').innerText = `${currentPlant.minH} ~ ${currentPlant.maxH}%`;
+
+            generateTerrainData(currentPlant);
+            renderTerrains(currentPlant);
+        }
+
+        function generateTerrainData(plant) {
+            currentTerrains = [];
+            // 隨機決定哪一個地形是正確答案 (0 ~ 4)
+            const correctIndex = Math.floor(Math.random() * 5);
+            
+            // 隨機打亂地形外觀順序，讓森林不一定總是在第一個
+            const shuffledVisuals = [...terrainsVisuals].sort(() => Math.random() - 0.5);
+
+            for (let i = 0; i < 5; i++) {
+                let t, h;
+                let isCorrect = (i === correctIndex);
+
+                if (isCorrect) {
+                    // 產生正確範圍內的數值
+                    t = getRandomInt(plant.minT, plant.maxT);
+                    h = getRandomInt(plant.minH, plant.maxH);
+                } else {
+                    // 產生錯誤數值，必定至少有一個條件不符合 (迴圈直到不符合為止)
+                    let invalid = false;
+                    while (!invalid) {
+                        t = getRandomInt(10, 45);  // 合理的自然溫度範圍
+                        h = getRandomInt(5, 100);  // 合理的濕度範圍
+                        
+                        // 檢查是否不小心落在正確區間內
+                        const isTempOK = (t >= plant.minT && t <= plant.maxT);
+                        const isHumOK = (h >= plant.minH && h <= plant.maxH);
+                        
+                        if (!(isTempOK && isHumOK)) {
+                            invalid = true;
+                        }
+                    }
+                }
+
+                currentTerrains.push({
+                    visual: shuffledVisuals[i],
+                    temp: t,
+                    hum: h,
+                    isCorrect: isCorrect
+                });
+            }
+        }
+
+        function renderTerrains(plant) {
+            const container = document.getElementById('terrains-container');
+            container.innerHTML = '';
+
+            currentTerrains.forEach((terrain, index) => {
+                const card = document.createElement('div');
+                card.className = `group relative h-48 rounded-2xl shadow-md overflow-hidden detector-cursor transform transition-transform hover:scale-105 hover:shadow-xl ${terrain.visual.bg}`;
+                
+                card.innerHTML = `
+                    <!-- 預設地形顯示 -->
+                    <div class="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                        <div class="text-5xl mb-2 drop-shadow-md">${terrain.visual.emoji}</div>
+                        <div class="text-lg font-bold ${terrain.visual.text} tracking-wider">${terrain.visual.name}</div>
+                    </div>
+                    
+                    <!-- 探測儀掃描線 -->
+                    <div class="scan-line hidden group-hover:block"></div>
+
+                    <!-- Hover/探測 數據浮現層 -->
+                    <div class="absolute inset-0 bg-gray-900 bg-opacity-85 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4 z-20">
+                        <div class="text-xs text-green-400 font-mono mb-2 uppercase tracking-widest border-b border-green-800 pb-1">Sensor Data</div>
+                        <div class="text-2xl font-bold text-white flex items-center w-full justify-center gap-2 mb-1">
+                            <span class="text-gray-400 text-lg">🌡️</span> ${terrain.temp}<span class="text-sm font-normal text-gray-400">°C</span>
+                        </div>
+                        <div class="text-2xl font-bold text-white flex items-center w-full justify-center gap-2 mb-3">
+                            <span class="text-gray-400 text-lg">💧</span> ${terrain.hum}<span class="text-sm font-normal text-gray-400"></span>%
+                        </div>
+                        <div class="text-xs text-gray-300 bg-white bg-opacity-20 px-3 py-1 rounded-full animate-pulse">點擊確認棲地</div>
+                    </div>
+                `;
+
+                card.onclick = () => handleTerrainClick(terrain, plant);
+                container.appendChild(card);
+            });
+        }
+
+        /* === 判定與回饋系統 === */
+        function handleTerrainClick(terrain, plant) {
+            if (terrain.isCorrect) {
+                showModal(
+                    '太棒了！🎯', 
+                    `這裡的溫濕度 (${terrain.temp}°C, ${terrain.hum}%) 非常適合 ${plant.name} 生長！`, 
+                    'success'
+                );
+            } else {
+                let errorReason = '';
+                if (terrain.temp > plant.maxT) errorReason = '這裡太熱了，植物容易枯萎！';
+                else if (terrain.temp < plant.minT) errorReason = '這裡太冷了，植物會停止生長甚至凍傷！';
+                else if (terrain.hum > plant.maxH) errorReason = '這裡太濕了，植物的根部容易腐爛死亡！';
+                else if (terrain.hum < plant.minH) errorReason = '這裡太乾了，植物會嚴重缺水枯死！';
+
+                showModal(
+                    '糟糕，這裡不適合！❌', 
+                    `你探測到的數據是 溫度 ${terrain.temp}°C, 濕度 ${terrain.hum}%。<br><br><span class="font-bold text-red-600">${errorReason}</span><br>請再重新尋找。`, 
+                    'error'
+                );
+            }
+        }
+
+        function showModal(title, msg, type) {
+            modal.title.innerHTML = title;
+            modal.desc.innerHTML = msg;
+            
+            // 移除舊樣式
+            modal.icon.classList.remove('text-green-500', 'text-red-500');
+            modal.btn.classList.remove('bg-green-500', 'hover:bg-green-600', 'bg-red-500', 'hover:bg-red-600');
+
+            if (type === 'success') {
+                modal.icon.innerText = '✅';
+                modal.icon.classList.add('text-green-500');
+                modal.btn.classList.add('bg-green-500', 'hover:bg-green-600');
+                modal.btn.innerText = (currentRound < totalRounds - 1) ? '進入下一回合' : '查看結算';
+                modal.btn.onclick = () => {
+                    closeModal();
+                    nextRound();
+                };
+            } else {
+                modal.icon.innerText = '⚠️';
+                modal.icon.classList.add('text-red-500');
+                modal.btn.classList.add('bg-red-500', 'hover:bg-red-600');
+                modal.btn.innerText = '重新選擇';
+                modal.btn.onclick = () => {
+                    closeModal();
+                };
+            }
+
+            modal.overlay.classList.remove('hidden');
+            
+            // 重置並觸發動畫
+            modal.content.classList.remove('modal-animate');
+            void modal.content.offsetWidth; // 觸發 reflow
+            modal.content.classList.add('modal-animate');
+        }
+
+        function closeModal() {
+            modal.overlay.classList.add('hidden');
+        }
+
+        function nextRound() {
+            currentRound++;
+            if (currentRound >= totalRounds) {
+                switchScreen('outro');
+            } else {
+                loadRound();
+            }
+        }
+
+        /* === 工具函式 === */
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+    </script>
+</body>
+</html>
